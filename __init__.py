@@ -1,24 +1,32 @@
 from cryptography.fernet import Fernet
-from flask import Flask, render_template_string, render_template, jsonify
-from flask import render_template
-from flask import json
-from urllib.request import urlopen
-import sqlite3
-                                                                                                                                       
-app = Flask(__name__)                                                                                                                  
-                                                                                                                                       
+from flask import Flask, render_template
+import os
+
+app = Flask(__name__)
+
+# 1) Charger la clé depuis l'environnement (NE PAS générer à chaque run)
+FERNET_KEY = os.environ.get("FERNET_KEY")
+if not FERNET_KEY:
+    raise RuntimeError("La variable d'environnement FERNET_KEY n'est pas définie. "
+                       "Définis-la avant de lancer l'app.")
+f = Fernet(FERNET_KEY.encode())
+
 @app.route('/')
 def hello_world():
-    return render_template('hello.html')  #Comm2
-
-key = Fernet.generate_key()
-f = Fernet(key)
+    return render_template('hello.html')
 
 @app.route('/encrypt/<string:valeur>')
 def encryptage(valeur):
-    valeur_bytes = valeur.encode()  # Conversion str -> bytes 
-    token = f.encrypt(valeur_bytes)  # Encrypt la valeur
-    return f"Valeur encryptée : {token.decode()}"  # Retourne le token en str
-                                                                                                                                                     
+    token = f.encrypt(valeur.encode())
+    return f"Valeur encryptée : {token.decode()}"
+
+@app.route('/decrypt/<string:valeur>')
+def decryptage(valeur):
+    try:
+        texte = f.decrypt(valeur.encode()).decode()
+        return f"Texte déchiffré : {texte}"
+    except Exception as e:
+        return f"Erreur lors du décryptage : {e}"
+
 if __name__ == "__main__":
-  app.run(debug=True)
+    app.run(debug=True)
